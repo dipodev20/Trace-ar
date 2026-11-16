@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<title>TraceAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff;--card:#f5f5f7;--tx:#1d1d1f;--mut:#86868b;--ac:#ff6a00;--line:rgba(0,0,0,.08);--glass:rgba(255,255,255,.74);color-scheme:light;
+--font:"Manrope",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,sans-serif;--disp:"Unbounded","Manrope",-apple-system,sans-serif;--ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font-family:var(--font);overflow:hidden;overscroll-behavior:none;-webkit-font-smoothing:antialiased}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button{font-family:inherit;color:inherit;border:0;cursor:pointer}
+
+/* ===== Главный экран ===== */
+#home{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top,0px) + 18px) 22px calc(env(safe-area-inset-bottom,0px) + 18px);overflow-y:auto;transition:opacity .55s var(--ease),transform .55s var(--ease),visibility .55s}
+body.live #home{opacity:0;transform:scale(1.05);visibility:hidden;pointer-events:none}
+.rise{opacity:0;transform:translateY(22px);animation:rise .9s var(--ease) forwards;animation-delay:calc(var(--d,0)*90ms)}
+@keyframes rise{to{opacity:1;transform:none}}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:-.02em}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ac);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,106,0,.55)}50%{box-shadow:0 0 0 7px rgba(255,106,0,0)}}
+.hero{margin:18px 0 22px;border-radius:38px;background:radial-gradient(circle at 70% 15%,#fff,#f0f0f3 60%,#e7e7eb);aspect-ratio:1/.8;display:grid;place-items:center;position:relative;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line)}
+.hero svg{width:80%;height:auto;overflow:visible}
+.hero .g{transform-box:fill-box;transform-origin:center}
+.phone{animation:float 5s ease-in-out infinite}
+.paper{animation:paper 7s ease-in-out infinite}
+.pencil{animation:write 3.2s ease-in-out infinite}
+.dash{stroke-dasharray:2 9;animation:march 1.6s linear infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+@keyframes paper{50%{transform:rotate(2deg) translateY(4px)}}
+@keyframes write{0%,100%{transform:translate(0,0) rotate(0)}30%{transform:translate(-14px,10px) rotate(-4deg)}60%{transform:translate(-4px,24px) rotate(2deg)}}
+@keyframes march{to{stroke-dashoffset:-44}}
+h1{margin:0 0 12px;font-family:var(--disp);font-size:clamp(26px,8vw,36px);line-height:1.12;letter-spacing:-.05em;font-weight:600}
+h1 em{font-style:normal;color:var(--ac)}
+.sub{margin:0 0 20px;color:var(--mut);font-size:16px;line-height:1.5;font-weight:500}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+.step{background:var(--card);border-radius:22px;padding:14px 12px;display:flex;flex-direction:column;gap:12px;font-size:13px;font-weight:700;line-height:1.2;transition:transform .3s var(--ease)}
+.step:active{transform:scale(.95)}
+.step svg{color:var(--ac)}
+.cta{margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:8px}
+.btn{position:relative;overflow:hidden;height:58px;border-radius:999px;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;transition:transform .25s var(--ease)}
+.btn:active{transform:scale(.96)}
+.btn.p{background:#000;color:#fff}
+.btn.p::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-20deg);animation:shine 4.5s ease-in-out infinite 1.5s}
+@keyframes shine{0%{left:-80px}40%,100%{left:120%}}
+.btn.s{background:var(--card);color:var(--tx)}
+#err{color:#d1400a;font-size:13px;text-align:center;min-height:16px;font-weight:600}
+
+/* ===== Камера ===== */
+#cam{position:fixed;inset:0;z-index:1;opacity:0;visibility:hidden;transition:opacity .6s var(--ease),visibility .6s}
+body.live #cam{opacity:1;visibility:visible}
+#v{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;background:#111}
+#stage{position:fixed;inset:0;touch-action:none;overflow:hidden}
+#ov{position:absolute;left:50%;top:50%;max-width:80vw;max-height:60vh;user-select:none;-webkit-user-drag:none;pointer-events:none;display:none;transition:opacity .5s}
+#grid{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:12.5vw 12.5vw}
+#grid.on{opacity:1}
+.gl{background:var(--glass);backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);box-shadow:0 8px 30px rgba(0,0,0,.18),inset 0 0 0 .5px rgba(255,255,255,.7)}
+.top{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 0;display:flex;justify-content:space-between;z-index:5;pointer-events:none;transform:translateY(-120%);transition:transform .6s var(--ease)}
+body.live .top{transform:none;transition-delay:.2s}
+.top .row{display:flex;gap:8px}
+.ib{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;color:var(--tx);pointer-events:auto;transition:transform .25s var(--ease),background .25s,color .25s}
+.ib:active{transform:scale(.88)}
+.ib.on{background:var(--ac);color:#fff;box-shadow:0 6px 22px rgba(255,106,0,.5)}
+#panel{position:fixed;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);border-radius:34px;padding:16px 14px 14px;z-index:5;transform:translateY(130%);opacity:0;transition:transform .6s var(--ease),opacity .4s}
+body.live:not(.nopanel) #panel{transform:none;opacity:1;transition-delay:.3s}
+.sl{display:flex;align-items:center;gap:12px;font-size:13px;font-weight:700;margin:0 6px 16px}
+.sl span:first-child{color:var(--mut);font-weight:600}
+.sl b{width:42px;text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:7px;border-radius:7px;outline:none;--p:50%;background:linear-gradient(90deg,var(--ac) var(--p),rgba(0,0,0,.12) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:transform .2s var(--ease)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border:0;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.t{background:none;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11px;font-weight:700;padding:2px 0}
+.t span.c{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.06);display:grid;place-items:center;transition:background .3s,color .3s,transform .35s var(--ease),box-shadow .3s}
+.t:active span.c{transform:scale(.86)}
+.t.on span.c{background:var(--ac);color:#fff;box-shadow:0 6px 20px rgba(255,106,0,.45)}
+#hint{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:4;display:none;align-items:center;gap:10px;padding:15px 22px;border-radius:999px;font-size:15px;font-weight:700;animation:breathe 2.6s ease-in-out infinite}
+#hint svg{color:var(--ac)}
+@keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.05)}}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 72px);transform:translate(-50%,-20px) scale(.95);opacity:0;z-index:30;max-width:88vw;padding:12px 18px;border-radius:999px;font-size:14px;font-weight:700;text-align:center;pointer-events:none;transition:transform .5s var(--ease),opacity .3s}
+#toast.show{transform:translate(-50%,0) scale(1);opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}.rise{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-img" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="4"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/></symbol>
+<symbol id="i-flip" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7L3 12l5 5z"/><path d="M16 7l5 5-5 5z"/></symbol>
+<symbol id="i-pen" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5a2 2 0 012.8 0l.2.2a2 2 0 010 2.8L8 19z"/><path d="M14 7l3 3"/></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M4 12h16M12 4v16"/></symbol>
+<symbol id="i-reset" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 102.6-6.1"/><path d="M3.5 4.5v4h4"/></symbol>
+<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></symbol>
+<symbol id="i-flipcam" viewBox="0 0 24 24"><path d="M20 7v4h-4"/><path d="M4 17v-4h4"/><path d="M6.3 9A7 7 0 0118 7l2 4M17.7 15A7 7 0 016 17l-2-4"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+<symbol id="i-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="3"/><path d="M8 11V8a4 4 0 017.5-1.5"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-cam" viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></symbol>
+<symbol id="i-hand" viewBox="0 0 24 24"><path d="M12 3v7M8 7l4-4 4 4"/><path d="M5 13v4a3 3 0 003 3h8a3 3 0 003-3v-4"/></symbol>
+</defs></svg>
+
+<div id="home">
+  <div class="brand rise" style="--d:0"><span class="dot"></span>TraceAR</div>
+  <div class="hero rise" style="--d:1">
+    <svg viewBox="0 0 320 250" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <g class="g paper"><rect x="28" y="84" width="196" height="140" rx="12" fill="#fff" stroke="#d2d2d7" stroke-width="2" transform="rotate(-6 126 154)"/>
+      <path d="M52 120h120M52 140h96M52 160h110" stroke="#e5e5ea" stroke-width="3" transform="rotate(-6 126 154)"/></g>
+      <g class="g phone"><rect x="112" y="24" width="112" height="196" rx="22" fill="#fff" stroke="#000" stroke-width="4"/>
+      <rect x="150" y="34" width="36" height="9" rx="4.5" fill="#000"/>
+      <circle class="dash" cx="168" cy="108" r="30" stroke="#ff6a00" stroke-width="3.5"/>
+      <path class="dash" d="M144 94c8-18 40-18 48 0" stroke="#ff6a00" stroke-width="3.5"/>
+      <path class="dash" d="M138 180c6-26 54-26 60 0" stroke="#ff6a00" stroke-width="3.5"/></g>
+      <g class="g pencil"><path d="M230 176l44-76 12 7-44 76-16 6z" fill="#000"/><path d="M230 176l-2 14 14-6z" fill="#ff6a00"/></g>
+    </svg>
+  </div>
+  <h1 class="rise" style="--d:2">Рисуйте по контуру. <em>Точно.</em></h1>
+  <p class="sub rise" style="--d:3">Наведите камеру на бумагу. Картинка появится поверх, а вы обведёте её карандашом.</p>
+  <div class="steps rise" style="--d:4">
+    <div class="step"><svg class="i"><use href="#i-img"/></svg>Выберите фото</div>
+    <div class="step"><svg class="i"><use href="#i-cam"/></svg>Наведите камеру</div>
+    <div class="step"><svg class="i"><use href="#i-pen"/></svg>Обведите</div>
+  </div>
+  <div class="cta rise" style="--d:5">
+    <div id="err"></div>
+    <button class="btn p" id="go"><svg class="i"><use href="#i-hand"/></svg>Выбрать изображение</button>
+    <button class="btn s" id="camOnly">Только камера</button>
+  </div>
+</div>
+
+<div id="cam">
+  <video id="v" autoplay playsinline muted></video>
+  <div id="grid"></div>
+  <div id="stage"><img id="ov" alt=""></div>
+  <button class="gl" id="hint"><svg class="i"><use href="#i-img"/></svg>Добавьте изображение</button>
+  <div class="top">
+    <button class="gl ib" id="bBack" aria-label="Назад"><svg class="i"><use href="#i-back"/></svg></button>
+    <div class="row">
+      <button class="gl ib" id="bPanel" aria-label="Панель"><svg class="i"><use href="#i-eye"/></svg></button>
+      <button class="gl ib" id="bTorch" aria-label="Фонарик"><svg class="i"><use href="#i-bolt"/></svg></button>
+      <button class="gl ib" id="bCam" aria-label="Камера"><svg class="i"><use href="#i-flipcam"/></svg></button>
+      <button class="gl ib" id="bLock" aria-label="Блокировка"><svg class="i"><use href="#i-unlock"/></svg></button>
+    </div>
+  </div>
+  <div id="panel" class="gl">
+    <div class="sl"><span>Прозрачность</span><input type="range" id="op" min="5" max="100" value="55"><b id="opv">55%</b></div>
+    <div class="tools">
+      <button class="t" id="bImg"><span class="c"><svg class="i"><use href="#i-img"/></svg></span>Фото</button>
+      <button class="t" id="bFlip"><span class="c"><svg class="i"><use href="#i-flip"/></svg></span>Зеркало</button>
+      <button class="t" id="bLine"><span class="c"><svg class="i"><use href="#i-pen"/></svg></span>Контур</button>
+      <button class="t" id="bGrid"><span class="c"><svg class="i"><use href="#i-grid"/></svg></span>Сетка</button>
+      <button class="t" id="bReset"><span class="c"><svg class="i"><use href="#i-reset"/></svg></span>Сброс</button>
+    </div>
+  </div>
+</div>
+<div id="toast" class="gl"></div>
+<input type="file" id="file" accept="image/*" hidden>
+
+<script>
+const $=id=>document.getElementById(id);
+const v=$('v'),ov=$('ov'),stage=$('stage');
+const S={x:0,y:0,s:1,r:0,flip:false,op:.55,lock:false,facing:'environment',torch:false,line:false};
+let stream=null,tt=0;
+
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2600)}
+document.addEventListener('click',e=>{if(e.target.closest('button')&&navigator.vibrate)navigator.vibrate(8)});
+
+function apply(){
+  ov.style.transform='translate(-50%,-50%) translate('+S.x+'px,'+S.y+'px) rotate('+S.r+'rad) scale('+(S.flip?-S.s:S.s)+','+S.s+')';
+  ov.style.opacity=S.op;
+  ov.style.filter=S.line?'grayscale(1) contrast(1.6)':'none';
+}
+function smooth(){ov.style.transition='transform .45s cubic-bezier(.2,.8,.2,1),opacity .5s';setTimeout(()=>ov.style.transition='opacity .5s',480)}
+function reset(){smooth();S.x=S.y=0;S.s=1;S.r=0;S.flip=false;$('bFlip').classList.remove('on');apply()}
+function fill(){const e=$('op');e.style.setProperty('--p',((e.value-5)/95*100)+'%')}
+function hint(){$('hint').style.display=ov.dataset.u?'none':'flex'}
+
+async function startCam(){
+  $('err').textContent='';
+  S.torch=false;$('bTorch').classList.remove('on');
+  try{
+    if(stream)stream.getTracks().forEach(t=>t.stop());
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:S.facing},width:{ideal:1280},height:{ideal:720}},audio:false});
+    v.srcObject=stream;
+    try{await navigator.wakeLock.request('screen')}catch(e){}
+    return true;
+  }catch(e){
+    $('err').textContent='Нет доступа к камере. Откройте страницу по https и разрешите камеру.';
+    return false;
+  }
+}
+async function begin(){if(await startCam()){document.body.classList.add('live');hint()}}
+
+// фонарик: пробуем три способа
+async function setTorch(on){
+  const t=stream&&stream.getVideoTracks()[0];if(!t)return false;
+  const tries=[
+    ()=>t.applyConstraints({advanced:[{torch:on}]}),
+    ()=>t.applyConstraints({torch:on}),
+    ()=>new ImageCapture(t).setOptions({torch:on,fillLightMode:on?'flash':'off'})
+  ];
+  for(const f of tries){try{await f();return true}catch(e){}}
+  return false;
+}
+$('bTorch').onclick=async e=>{
+  const b=e.currentTarget;
+  if(S.facing==='user'){toast('Фонарик есть только у задней камеры');return}
+  const want=!S.torch;
+  if(await setTorch(want)){S.torch=want;b.classList.toggle('on',want)}
+  else toast('Фонарик не поддерживается. Откройте в Chrome');
+};
+
+$('go').onclick=()=>$('file').click();
+$('camOnly').onclick=begin;
+$('hint').onclick=()=>$('file').click();
+$('bImg').onclick=()=>$('file').click();
+$('bBack').onclick=()=>{if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('live')};
+$('file').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  if(ov.dataset.u)URL.revokeObjectURL(ov.dataset.u);
+  const u=URL.createObjectURL(f);ov.dataset.u=u;ov.src=u;
+  ov.style.display='block';ov.style.opacity=0;void ov.offsetWidth;
+  reset();
+  if(!document.body.classList.contains('live'))await begin();else hint();
+  e.target.value='';
+};
+$('op').oninput=e=>{S.op=e.target.value/100;$('opv').textContent=e.target.value+'%';fill();apply()};
+$('bFlip').onclick=e=>{S.flip=!S.flip;e.currentTarget.classList.toggle('on',S.flip);smooth();apply()};
+$('bLine').onclick=e=>{S.line=!S.line;e.currentTarget.classList.toggle('on',S.line);apply()};
+$('bGrid').onclick=e=>{const on=$('grid').classList.toggle('on');e.currentTarget.classList.toggle('on',on)};
+$('bReset').onclick=reset;
+$('bPanel').onclick=e=>{const on=document.body.classList.toggle('nopanel');e.currentTarget.classList.toggle('on',on)};
+$('bLock').onclick=e=>{S.lock=!S.lock;e.currentTarget.classList.toggle('on',S.lock);e.currentTarget.querySelector('use').setAttribute('href',S.lock?'#i-lock':'#i-unlock');toast(S.lock?'Рисунок закреплён':'Рисунок можно двигать')};
+$('bCam').onclick=async()=>{S.facing=S.facing==='environment'?'user':'environment';await startCam()};
+
+// жесты: 1 палец — перемещение, 2 пальца — масштаб и поворот, двойной тап — сброс
+const P=new Map();let L=null,lastTap=0,moved=0;
+function info(){
+  const a=[...P.values()];
+  if(a.length===1)return{n:1,cx:a[0][0],cy:a[0][1]};
+  if(a.length>=2){const dx=a[1][0]-a[0][0],dy=a[1][1]-a[0][1];return{n:2,cx:(a[0][0]+a[1][0])/2,cy:(a[0][1]+a[1][1])/2,d:Math.hypot(dx,dy)||1,a:Math.atan2(dy,dx)}}
+  return null;
+}
+stage.addEventListener('pointerdown',e=>{if(S.lock)return;stage.setPointerCapture(e.pointerId);P.set(e.pointerId,[e.clientX,e.clientY]);L=info();moved=0});
+stage.addEventListener('pointermove',e=>{
+  if(!P.has(e.pointerId)||S.lock)return;
+  P.set(e.pointerId,[e.clientX,e.clientY]);
+  const c=info();if(!c||!L)return;
+  moved+=Math.abs(c.cx-L.cx)+Math.abs(c.cy-L.cy);
+  S.x+=c.cx-L.cx;S.y+=c.cy-L.cy;
+  if(c.n===2&&L.n===2){S.s=Math.min(8,Math.max(.1,S.s*c.d/L.d));S.r+=S.flip?-(c.a-L.a):(c.a-L.a)}
+  L=c;apply();
+});
+const up=e=>{
+  if(P.size===1&&moved<8){const n=Date.now();if(n-lastTap<300){reset();lastTap=0}else lastTap=n}
+  P.delete(e.pointerId);L=info();
+};
+stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',e=>{P.delete(e.pointerId);L=info()});
+stage.addEventListener('wheel',e=>{if(S.lock)return;e.preventDefault();S.s=Math.min(8,Math.max(.1,S.s*(e.deltaY<0?1.06:.94)));apply()},{passive:false});
+fill();apply();
+</script>
+</body>
+</html>
